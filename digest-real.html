@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Digest">
+    <meta name="theme-color" content="#2F5D4F">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%232F5D4F' width='100' height='100'/><text y='75' font-size='70' fill='white' font-family='serif' x='50%' text-anchor='middle'>D</text></svg>">
+    <title>Digest - 知识消化系统</title>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --bg-primary: #F5F3EF;
+            --bg-secondary: #FFFFFF;
+            --text-primary: #2C3333;
+            --text-secondary: #6B7280;
+            --accent: #2F5D4F;
+            --accent-light: #4A7C6A;
+            --accent-lighter: #E8F0ED;
+            --border: #E5E3DC;
+            --shadow: rgba(47, 93, 79, 0.12);
+            --safe-area-top: env(safe-area-inset-top);
+            --safe-area-bottom: env(safe-area-inset-bottom);
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            -webkit-font-smoothing: antialiased;
+            touch-action: pan-y;
+            overscroll-behavior: none;
+        }
+
+        .app {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding-top: var(--safe-area-top);
+            padding-bottom: var(--safe-area-bottom);
+        }
+
+        .top-bar {
+            padding: 1rem 1.25rem;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            font-family: 'Libre Baskerville', serif;
+            font-size: 1.5rem;
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        .date-info {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .streak {
+            margin-top: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            background: var(--accent-lighter);
+            border-radius: 12px;
+        }
+
+        .streak-icon {
+            font-size: 1.25rem;
+        }
+
+        .streak-text {
+            font-size: 0.85rem;
+            color: var(--accent);
+            flex: 1;
+        }
+
+        .streak-count {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: var(--accent);
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 1rem 1.25rem 6rem;
+        }
+
+        .today-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .progress-indicator {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .cards-container {
+            position: relative;
+            min-height: 500px;
+        }
+
+        .review-card {
+            background: var(--bg-secondary);
+            border-radius: 20px;
+            padding: 1.75rem;
+            box-shadow: 0 4px 16px var(--shadow);
+            position: absolute;
+            width: 100%;
+            touch-action: pan-y;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .review-card.active {
+            z-index: 3;
+        }
+
+        .review-card.next {
+            z-index: 2;
+            transform: scale(0.95) translateY(10px);
+            opacity: 0.7;
+        }
+
+        .review-card.hidden {
+            z-index: 1;
+            transform: scale(0.9) translateY(20px);
+            opacity: 0.4;
+        }
+
+        .card-swipe-indicator {
+            position: absolute;
+            top: 50%;
+            font-size: 3rem;
+            opacity: 0;
+            transform: translateY(-50%);
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+
+        .card-swipe-indicator.left {
+            left: 2rem;
+        }
+
+        .card-swipe-indicator.right {
+            right: 2rem;
+        }
+
+        .card-category {
+            display: inline-block;
+            padding: 0.4rem 0.9rem;
+            background: var(--accent-lighter);
+            color: var(--accent);
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            line-height: 1.4;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .card-summary {
+            font-size: 0.9rem;
+            line-height: 1.7;
+            color: var(--text-secondary);
+            margin-bottom: 1.25rem;
+        }
+
+        .card-insight {
+            background: var(--accent-lighter);
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            border-left: 3px solid var(--accent);
+        }
+
+        .insight-label {
+            font-size: 0.7rem;
+            color: var(--accent);
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+            letter-spacing: 0.05em;
+        }
+
+        .insight-text {
+            font-size: 0.88rem;
+            line-height: 1.6;
+            color: var(--text-primary);
+        }
+
+        .swipe-hint {
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 1.5rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 1rem;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-mastered {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-mastered:active {
+            transform: scale(0.95);
+            background: var(--accent-light);
+        }
+
+        .btn-review {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-review:active {
+            transform: scale(0.95);
+            background: var(--accent-lighter);
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+            padding: 0.75rem 0;
+            padding-bottom: calc(0.75rem + var(--safe-area-bottom));
+            display: flex;
+            justify-content: space-around;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+            z-index: 100;
+        }
+
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.5rem;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .nav-item.active {
+            color: var(--accent);
+        }
+
+        .nav-icon {
+            font-size: 1.4rem;
+        }
+
+        .nav-label {
+            font-size: 0.7rem;
+        }
+
+        .screen {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        .add-content-section {
+            padding: 1.5rem 1.25rem;
+        }
+
+        .input-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .input-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 1rem;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-size: 1rem;
+            font-family: inherit;
+            background: var(--bg-secondary);
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-lighter);
+        }
+
+        textarea.input-field {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .add-btn {
+            width: 100%;
+            padding: 1.1rem;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .add-btn:active {
+            transform: scale(0.98);
+        }
+
+        .add-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            padding: 1.25rem;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            font-family: 'Libre Baskerville', serif;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        .category-list {
+            padding: 1.25rem;
+        }
+
+        .category-item {
+            background: var(--bg-secondary);
+            padding: 1.25rem;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .category-item:active {
+            transform: scale(0.98);
+            background: var(--accent-lighter);
+        }
+
+        .category-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .category-count {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 6rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--accent);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            z-index: 1000;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .review-card {
+            animation: fadeInUp 0.4s ease;
+        }
+
+        .category-select {
+            width: 100%;
+            padding: 1rem;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-size: 1rem;
+            font-family: inherit;
+            background: var(--bg-secondary);
+            margin-bottom: 1.25rem;
+        }
+
+        .category-select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-lighter);
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <div class="screen active" id="homeScreen">
+            <div class="top-bar">
+                <div class="logo-section">
+                    <div class="logo">Digest</div>
+                    <div class="date-info" id="todayDate"></div>
+                </div>
+                <div class="streak">
+                    <span class="streak-icon">🔥</span>
+                    <span class="streak-text">坚持复习</span>
+                    <span class="streak-count" id="streakCount">0</span>
+                    <span class="streak-text">天</span>
+                </div>
+            </div>
+
+            <div class="content">
+                <div class="today-section">
+                    <div class="section-header">
+                        <h2 class="section-title">今日复习</h2>
+                        <span class="progress-indicator"><span id="currentCard">0</span>/<span id="totalCards">0</span></span>
+                    </div>
+                    <div class="cards-container" id="cardsContainer">
+                        <div class="loading">
+                            <div class="loading-spinner"></div>
+                            <p style="margin-top: 1rem;">加载中...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="screen" id="addScreen">
+            <div class="top-bar">
+                <div class="logo-section">
+                    <div class="logo">添加收藏</div>
+                </div>
+            </div>
+            <div class="content">
+                <div class="add-content-section">
+                    <div class="input-group">
+                        <label class="input-label">标题</label>
+                        <input type="text" class="input-field" placeholder="文章标题或主题" id="contentTitle">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">分类</label>
+                        <select class="category-select" id="contentCategory">
+                            <option value="UX设计">UX设计</option>
+                            <option value="自我成长">自我成长</option>
+                            <option value="命理易学">命理易学</option>
+                            <option value="产品策略">产品策略</option>
+                            <option value="其他">其他</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">核心内容</label>
+                        <textarea class="input-field" placeholder="这篇内容的核心观点是什么?" id="contentSummary"></textarea>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">你的思考 (可选)</label>
+                        <textarea class="input-field" placeholder="这个内容对你的启发是什么?" id="contentInsight"></textarea>
+                    </div>
+                    <button class="add-btn" id="addBtn" onclick="addNewContent()">添加到收藏</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="screen" id="statsScreen">
+            <div class="top-bar">
+                <div class="logo-section">
+                    <div class="logo">知识地图</div>
+                </div>
+            </div>
+            <div class="content">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalCollections">0</div>
+                        <div class="stat-label">总收藏</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="masteredCount">0</div>
+                        <div class="stat-label">已掌握</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="weekReviews">0</div>
+                        <div class="stat-label">本周复习</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="pendingCount">0</div>
+                        <div class="stat-label">待复习</div>
+                    </div>
+                </div>
+                <div class="category-list" id="categoryList"></div>
+            </div>
+        </div>
+
+        <div class="bottom-nav">
+            <button class="nav-item active" onclick="switchScreen('homeScreen', this)">
+                <div class="nav-icon">📚</div>
+                <div class="nav-label">今日</div>
+            </button>
+            <button class="nav-item" onclick="switchScreen('addScreen', this)">
+                <div class="nav-icon">➕</div>
+                <div class="nav-label">添加</div>
+            </button>
+            <button class="nav-item" onclick="switchScreen('statsScreen', this)">
+                <div class="nav-icon">📊</div>
+                <div class="nav-label">地图</div>
+            </button>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // 全局状态
+        let allCards = [];
+        let todayCards = [];
+        let currentCardIndex = 0;
+        let touchStartX = 0;
+        let touchCurrentX = 0;
+        let isDragging = false;
+
+        // 初始化
+        async function init() {
+            updateDate();
+            await loadAllData();
+            renderCards();
+            updateStats();
+        }
+
+        // 加载所有数据
+        async function loadAllData() {
+            try {
+                // 加载收藏列表
+                const collectionsData = await window.storage.get('digest_collections');
+                if (collectionsData && collectionsData.value) {
+                    allCards = JSON.parse(collectionsData.value);
+                }
+
+                // 选择今日要复习的卡片(基于遗忘曲线)
+                todayCards = selectTodayCards();
+
+            } catch (error) {
+                console.error('加载数据失败:', error);
+                allCards = [];
+                todayCards = [];
+            }
+        }
+
+        // 选择今日复习卡片
+        function selectTodayCards() {
+            const today = new Date().toDateString();
+            return allCards.filter(card => {
+                if (!card.nextReview) return true;
+                return new Date(card.nextReview).toDateString() <= today;
+            }).slice(0, 5); // 每天最多5张
+        }
+
+        // 渲染卡片
+        function renderCards() {
+            const container = document.getElementById('cardsContainer');
+            container.innerHTML = '';
+
+            if (todayCards.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">🎉</div>
+                        <h3>${allCards.length === 0 ? '还没有收藏' : '今日复习完成!'}</h3>
+                        <p style="margin-top: 0.5rem;">${allCards.length === 0 ? '去添加你的第一个收藏吧' : '明天见,继续加油!'}</p>
+                    </div>
+                `;
+                document.getElementById('currentCard').textContent = '0';
+                document.getElementById('totalCards').textContent = '0';
+                return;
+            }
+
+            if (currentCardIndex >= todayCards.length) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">🎉</div>
+                        <h3>今日复习完成!</h3>
+                        <p style="margin-top: 0.5rem;">明天见,继续加油!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            todayCards.slice(currentCardIndex, currentCardIndex + 3).forEach((card, index) => {
+                const cardEl = document.createElement('div');
+                cardEl.className = `review-card ${index === 0 ? 'active' : index === 1 ? 'next' : 'hidden'}`;
+                cardEl.innerHTML = `
+                    <div class="card-swipe-indicator left">↻</div>
+                    <div class="card-swipe-indicator right">✓</div>
+                    <span class="card-category">${card.category}</span>
+                    <h3 class="card-title">${card.title}</h3>
+                    <p class="card-summary">${card.summary}</p>
+                    ${card.insight ? `
+                    <div class="card-insight">
+                        <div class="insight-label">你的思考</div>
+                        <div class="insight-text">${card.insight}</div>
+                    </div>
+                    ` : ''}
+                    <div class="action-buttons">
+                        <button class="action-btn btn-review" onclick="handleReview()">↻ 需深化</button>
+                        <button class="action-btn btn-mastered" onclick="handleMastered()">✓ 已掌握</button>
+                    </div>
+                    <div class="swipe-hint">← 左滑需深化 | 右滑已掌握 →</div>
+                `;
+
+                if (index === 0) {
+                    cardEl.addEventListener('touchstart', handleTouchStart, {passive: true});
+                    cardEl.addEventListener('touchmove', handleTouchMove, {passive: false});
+                    cardEl.addEventListener('touchend', handleTouchEnd, {passive: true});
+                }
+
+                container.appendChild(cardEl);
+            });
+
+            document.getElementById('currentCard').textContent = currentCardIndex + 1;
+            document.getElementById('totalCards').textContent = todayCards.length;
+        }
+
+        // 触摸事件
+        function handleTouchStart(e) {
+            touchStartX = e.touches[0].clientX;
+            isDragging = true;
+        }
+
+        function handleTouchMove(e) {
+            if (!isDragging) return;
+            touchCurrentX = e.touches[0].clientX;
+            const diff = touchCurrentX - touchStartX;
+            const card = e.currentTarget;
+            card.style.transform = `translateX(${diff}px) rotate(${diff * 0.05}deg)`;
+            
+            const leftIndicator = card.querySelector('.card-swipe-indicator.left');
+            const rightIndicator = card.querySelector('.card-swipe-indicator.right');
+            
+            if (diff < -50) {
+                leftIndicator.style.opacity = Math.min(Math.abs(diff) / 150, 1);
+                rightIndicator.style.opacity = 0;
+            } else if (diff > 50) {
+                rightIndicator.style.opacity = Math.min(diff / 150, 1);
+                leftIndicator.style.opacity = 0;
+            } else {
+                leftIndicator.style.opacity = 0;
+                rightIndicator.style.opacity = 0;
+            }
+        }
+
+        function handleTouchEnd(e) {
+            if (!isDragging) return;
+            const diff = touchCurrentX - touchStartX;
+            const card = e.currentTarget;
+            
+            if (Math.abs(diff) > 120) {
+                if (diff > 0) {
+                    handleMastered();
+                } else {
+                    handleReview();
+                }
+            } else {
+                card.style.transform = '';
+            }
+            isDragging = false;
+        }
+
+        // 已掌握
+        async function handleMastered() {
+            const card = todayCards[currentCardIndex];
+            card.mastered = true;
+            card.reviewCount = (card.reviewCount || 0) + 1;
+            card.lastReview = new Date().toISOString();
+            // 设置下次复习时间(7天后)
+            card.nextReview = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+            
+            await saveCards();
+            showToast('✓ 已标记为掌握');
+            nextCard();
+        }
+
+        // 需深化
+        async function handleReview() {
+            const card = todayCards[currentCardIndex];
+            card.mastered = false;
+            card.reviewCount = (card.reviewCount || 0) + 1;
+            card.lastReview = new Date().toISOString();
+            // 设置下次复习时间(1天后)
+            card.nextReview = new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString();
+            
+            await saveCards();
+            showToast('↻ 已加入深化队列');
+            nextCard();
+        }
+
+        // 下一张卡片
+        function nextCard() {
+            currentCardIndex++;
+            setTimeout(() => {
+                renderCards();
+                updateStats();
+            }, 300);
+        }
+
+        // 保存卡片数据
+        async function saveCards() {
+            try {
+                await window.storage.set('digest_collections', JSON.stringify(allCards));
+            } catch (error) {
+                console.error('保存失败:', error);
+                showToast('❌ 保存失败');
+            }
+        }
+
+        // 添加新内容
+        async function addNewContent() {
+            const title = document.getElementById('contentTitle').value.trim();
+            const category = document.getElementById('contentCategory').value;
+            const summary = document.getElementById('contentSummary').value.trim();
+            const insight = document.getElementById('contentInsight').value.trim();
+            
+            if (!title || !summary) {
+                showToast('请填写标题和核心内容');
+                return;
+            }
+
+            const btn = document.getElementById('addBtn');
+            btn.disabled = true;
+            btn.textContent = '添加中...';
+
+            const newCard = {
+                id: Date.now(),
+                title,
+                category,
+                summary,
+                insight,
+                createdAt: new Date().toISOString(),
+                mastered: false,
+                reviewCount: 0,
+                nextReview: new Date().toISOString()
+            };
+
+            allCards.unshift(newCard);
+            
+            try {
+                await saveCards();
+                showToast('✓ 添加成功!');
+                
+                // 清空表单
+                document.getElementById('contentTitle').value = '';
+                document.getElementById('contentSummary').value = '';
+                document.getElementById('contentInsight').value = '';
+                
+                // 重新加载数据
+                await loadAllData();
+                updateStats();
+                
+                // 切换到首页
+                setTimeout(() => {
+                    switchScreen('homeScreen', document.querySelector('.nav-item'));
+                }, 1000);
+                
+            } catch (error) {
+                showToast('❌ 添加失败');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '添加到收藏';
+            }
+        }
+
+        // 更新统计
+        function updateStats() {
+            const mastered = allCards.filter(c => c.mastered).length;
+            const weekReviews = allCards.filter(c => {
+                if (!c.lastReview) return false;
+                const reviewDate = new Date(c.lastReview);
+                const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+                return reviewDate >= weekAgo;
+            }).length;
+            const pending = allCards.filter(c => !c.mastered).length;
+
+            document.getElementById('totalCollections').textContent = allCards.length;
+            document.getElementById('masteredCount').textContent = mastered;
+            document.getElementById('weekReviews').textContent = weekReviews;
+            document.getElementById('pendingCount').textContent = pending;
+
+            // 更新分类统计
+            const categories = {};
+            allCards.forEach(card => {
+                categories[card.category] = (categories[card.category] || 0) + 1;
+            });
+
+            const categoryList = document.getElementById('categoryList');
+            categoryList.innerHTML = Object.entries(categories)
+                .sort((a, b) => b[1] - a[1])
+                .map(([name, count]) => `
+                    <div class="category-item">
+                        <div class="category-name">${name}</div>
+                        <div class="category-count">${count}</div>
+                    </div>
+                `).join('');
+
+            // 更新连续天数(简化版)
+            const streak = Math.floor(weekReviews / 2);
+            document.getElementById('streakCount').textContent = streak;
+        }
+
+        // 显示提示
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        // 切换屏幕
+        function switchScreen(screenId, navItem) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+            navItem.classList.add('active');
+            
+            if (screenId === 'statsScreen') {
+                updateStats();
+            }
+        }
+
+        // 更新日期
+        function updateDate() {
+            const now = new Date();
+            const days = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+            const dateStr = `${now.getMonth() + 1}月${now.getDate()}日 ${days[now.getDay()]}`;
+            document.getElementById('todayDate').textContent = dateStr;
+        }
+
+        // 初始化应用
+        init();
+
+        document.addEventListener('gesturestart', (e) => e.preventDefault());
+    </script>
+</body>
+</html>
